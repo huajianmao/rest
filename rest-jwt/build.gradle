@@ -1,0 +1,13 @@
+dependencies {
+  implementation project(':rest-api')
+  implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+  implementation 'org.springframework.boot:spring-boot-starter-security'
+
+  implementation 'io.jsonwebtoken:jjwt:0.9.1'
+
+  testImplementation 'org.springframework.boot:spring-boot-starter-test'
+  testImplementation 'org.apache.httpcomponents:httpclient'
+
+  runtimeOnly 'com.h2database:h2'
+}
+

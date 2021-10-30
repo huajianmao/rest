@@ -1,0 +1,122 @@
+buildscript {
+  repositories {
+    jcenter()
+  }
+
+  dependencies {
+    classpath('org.springframework.boot:spring-boot-gradle-plugin:2.5.6')
+  }
+}
+
+allprojects {
+  apply plugin: 'java'
+  apply plugin: 'checkstyle'
+  apply plugin: 'jacoco'
+  apply plugin: 'maven-publish'
+  apply plugin: 'org.springframework.boot'
+  apply plugin: 'io.spring.dependency-management'
+
+  repositories {
+    jcenter()
+  }
+
+  dependencyManagement {
+    imports {
+      mavenBom 'org.springframework.boot:spring-boot-dependencies:2.5.6'
+    }
+  }
+
+  group = 'cn.hjmao.rest'
+  version = '0.0.1-SNAPSHOT'
+  sourceCompatibility = 11
+  targetCompatibility = 11
+
+  configurations {
+    compileOnly {
+      extendsFrom annotationProcessor
+    }
+  }
+
+  dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    compileOnly 'org.projectlombok:lombok:1.18.18'
+    annotationProcessor 'org.projectlombok:lombok:1.18.18'
+  }
+
+  checkstyle {
+    toolVersion = '8.39'
+    configFile = rootProject.file('config/checkstyle/checkstyle.xml')
+    configProperties = [ "suppressionFile" : rootProject.file('config/checkstyle/suppressions.xml')]
+  }
+
+  def commonCompilerArgs =
+    ["-Xlint:serial", "-Xlint:cast", "-Xlint:classfile", "-Xlint:dep-ann",
+     "-Xlint:divzero", "-Xlint:empty", "-Xlint:finally", "-Xlint:overrides", "-Xlint:unchecked",
+     "-Xlint:path", "-Xlint:processing", "-Xlint:static", "-Xlint:try", "-Xlint:-options"]
+
+  compileJava {
+    options.encoding = "UTF-8"
+    options.compilerArgs += commonCompilerArgs // + "-Werror"
+  }
+
+  compileTestJava {
+    options.encoding = "UTF-8"
+    options.compilerArgs += commonCompilerArgs
+  }
+
+  test {
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+
+    testLogging {
+      events "failed" //, "passed", "skipped", "standardOut", "standardError"
+      afterSuite { desc, result ->
+        if (!desc.parent) {
+          println "Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} successes, ${result.failedTestCount} failures, ${result.skippedTestCount} skipped)"
+        }
+      }
+    }
+  }
+
+  jacocoTestReport {
+    dependsOn test
+    reports {
+      xml.enabled = true
+    }
+    afterEvaluate {
+      classDirectories.from = files(classDirectories.files.collect {
+        fileTree(dir: it, excludes: [])
+      })
+    }
+  }
+
+  jar {
+    enabled = true
+  }
+
+  bootJar {
+    enabled = false
+  }
+
+  publishing {
+    repositories {
+      maven {
+        name = "GitHubPackages"
+        url = "https://maven.pkg.github.com/huajianmao/rest"
+        credentials {
+          username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_ACTOR")
+          password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
+        }
+      }
+    }
+
+    def newArtifactId = project.name.replace('.', '-')
+
+    publications {
+      gpr(MavenPublication) {
+        artifact jar
+        artifactId "${newArtifactId}"
+      }
+    }
+  }
+}
